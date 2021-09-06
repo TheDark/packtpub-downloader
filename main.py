@@ -3,14 +3,17 @@
 
 from __future__ import print_function
 import os
+import os.path
 import sys
 import glob
 import math
 import getopt
 import requests
+import json
 from tqdm import tqdm, trange
 from config import BASE_URL, PRODUCTS_ENDPOINT, URL_BOOK_TYPES_ENDPOINT, URL_BOOK_ENDPOINT
 from user import User
+from os import path
 
 
 #TODO: I should do a function that his only purpose is to request and return data
@@ -35,12 +38,17 @@ def get_books(user, offset=0, limit=10, is_verbose=False, is_quiet=False):
             how many book wanna get by request
     '''
     # TODO: given x time jwt expired and should refresh the header, user.refresh_header()
-    
+
+    user.build_auth()
+
     url, r, data = book_request(user, offset, limit)
-    
+
+    if r.status_code != 200:
+        return None
+
     print(f'You have {str(r.json()["count"])} books')
     print("Getting list of books...")
-    
+
     if not is_quiet:
         pages_list = trange(r.json()['count'] // limit, unit='Pages')
     else:
@@ -50,6 +58,31 @@ def get_books(user, offset=0, limit=10, is_verbose=False, is_quiet=False):
         data += book_request(user, offset, limit, is_verbose)[2]
     return data
 
+def get_books_from_cache(user, outdir, offset=0, limit=10, is_verbose=False, is_quiet=False):
+    '''
+        Request all your books from cache file, or downloads book list and saves to cache;
+        return json with info of all your books
+        Params
+        ...
+        header : str
+        offset : int
+        limit : int
+            how many book wanna get by request
+    '''
+    cachefile = path.join(outdir, 'packt_cache_file.json')
+    if path.exists(cachefile):
+        print('loading book list from cache[{}]'.format(cachefile))
+        with open(cachefile, 'r') as infile:
+            return json.load(infile)
+    else:
+        print('cache file not found [{}]'.format(cachefile))
+        cachedata = get_books(user, offset, limit, is_verbose, is_quiet)
+        if cachedata is None:
+            return None
+        print('saving book list to cache')
+        with open(cachefile, 'w') as outfile:
+            json.dump(cachedata, outfile)
+        return cachedata
 
 def get_url_book(user, book_id, format='pdf'):
     '''
@@ -146,17 +179,22 @@ def main(argv):
     # thanks to https://github.com/ozzieperez/packtpub-library-downloader/blob/master/downloader.py
     email = None
     password = None
-    root_directory = 'media' 
+    root_directory =  os.path.abspath('media')
     book_file_types = ['pdf', 'mobi', 'epub', 'code']
     separate = None
     verbose = None
     quiet = None
-    errorMessage = 'Usage: main.py -e <email> -p <password> [-d <directory> -b <book file types> -s -v -q]'
+    ask = None
+    list = None
+    usecache = None
+    productids = None
+    useragent = None
+    errorMessage = 'Usage: main.py -e <email> -p <password> [-d <directory> -b <book file types> -i <book productid>,... -u <user agent> -s -v -q -a -l -c]'
 
     # get the command line arguments/options
     try:
         opts, args = getopt.getopt(
-            argv, 'e:p:d:b:svq', ['email=', 'pass=', 'directory=', 'books=', 'separate', 'verbose', 'quiet'])
+            argv, 'e:p:d:b:i:u:svqalc', ['email=', 'pass=', 'directory=', 'books=', 'productids=', 'useragent=', 'separate', 'verbose', 'quiet', 'ask', 'list', 'cache'])
     except getopt.GetoptError:
         print(errorMessage)
         sys.exit(2)
@@ -178,6 +216,16 @@ def main(argv):
             verbose = True
         elif opt in ('-q', '--quiet'):
             quiet = True
+        elif opt in ('-a', '--ask'):
+            ask = True
+        elif opt in ('-l', '--list'):
+            list = True
+        elif opt in ('-c', '--cache'):
+            usecache = True
+        elif opt in ('-i', '--productids'):
+            productids = arg.split(',')
+        elif opt in ('-u', '--useragent'):
+            useragent = arg
 
     if verbose and quiet:
         print("Verbose and quiet cannot be used together.")
@@ -188,20 +236,60 @@ def main(argv):
         print(errorMessage)
         sys.exit(2)
 
+    if verbose:
+        print('email={}'.format(email))
+        print('password={}'.format(password))
+        print('root_directory={}'.format(root_directory))
+        print('book_file_types={}'.format(book_file_types))
+        print('separate={}'.format(separate))
+        print('verbose={}'.format(verbose))
+        print('quiet={}'.format(quiet))
+        print('ask={}'.format(ask))
+        print('list={}'.format(list))
+        print('usecache={}'.format(usecache))
+        print('productids={}'.format(productids))
+        print('useragent={}'.format(useragent))
+
     # check if not exists dir and create
     does_dir_exist(root_directory)
 
     # create user with his properly header
-    user = User(email, password)
+    user = User(email, password, root_directory, useragent)
 
     # get all your books
-    books = get_books(user, is_verbose=verbose, is_quiet=quiet)
-    print('Downloading books...')
-    if not quiet:
-        books_iter = tqdm(books, unit='Book')
+    if usecache:
+        books = get_books_from_cache(user, root_directory, is_verbose=verbose, is_quiet=quiet)
     else:
-        books_iter = books
+        books = get_books(user, is_verbose=verbose, is_quiet=quiet)
+
+    if books is None:
+        print("Failed to get books. Is cached authentication token expired?")
+        print("(delete mediatokencache.id to renew)")
+        return
+
+    books_iter = books
+
+    if list == True:
+        for book in books_iter:
+            if (productids is not None and book['productId'] not in productids):
+                continue
+            print('{}: {}'.format(book['productId'], book['productName']))
+        exit(0)
+
+    user.build_auth()
+
+    print('Downloading books...')
     for book in books_iter:
+        if (productids is not None and book['productId'] not in productids):
+            continue
+
+        if ask == True:
+            response = ''
+            while response != 'y' and response != 'n':
+                response = input('Download "{}"? [y/n] '.format(book['productName']))
+            if response == 'n':
+                continue
+
         # get the different file type of current book
         file_types = get_book_file_types(user, book['productId'])
         for file_type in file_types:

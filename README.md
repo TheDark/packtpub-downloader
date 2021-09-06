@@ -36,6 +36,11 @@ After the execution, you can see the content in the `book` directory.
 - *-s*, *--separate* = Create a separate directory for each book
 - *-v*, *--verbose* = Show more detailed information
 - *-q*, *--quiet* = Don't show information or progress bars
+- *-a*, *--ask* = interactive download: ask to save each file
+- *-l*, *--list* = list all books in account and their product ids
+- *-u*, *--usecache* = use cache to reduce api calls
+- *-i*, *--productids* = comma separated product ids to download
+- *-u*, *--useragent* = string for custom user agent
 
 **Book File Types**
 
@@ -43,5 +48,11 @@ After the execution, you can see the content in the `book` directory.
 - *mobi*: MOBI format
 - *epub*: EPUB format
 - *code*: Accompanying source code, saved as .zip files
+
+## Using the cache
+
+The login token is always cached in a file called `mediatokencache.id` in the current working directory. If you get an error logging in, delete this file.
+
+The `-c` argument activates the book list cache. It is stored in a file called `packt_cache_file.json` in the media output directory. To update the file list, just delete this file.
 
 I'm working on Python 3.6.0 
