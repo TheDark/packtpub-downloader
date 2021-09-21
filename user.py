@@ -21,10 +21,10 @@ class User:
     authorized = False
     tokenFilePath = None
     
-    def __init__(self, username, password, tokenFileDir, useragent = None):
+    def __init__(self, username, password, tokenFilePath, useragent = None):
         self.username = username
         self.password = password
-        self.tokenFilePath = tokenFileDir + 'tokencache.id'
+        self.tokenFilePath = tokenFilePath
         if useragent is not None:
             self.header["User-Agent"] = useragent
 

@@ -189,12 +189,27 @@ def main(argv):
     usecache = None
     productids = None
     useragent = None
-    errorMessage = 'Usage: main.py -e <email> -p <password> [-d <directory> -b <book file types> -i <book productid>,... -u <user agent> -s -v -q -a -l -c]'
+    errorMessage = 'Usage: main.py [-e <email> -p <password>] [-d <directory>] [-b <book file types>] [-i <book productid>,...] [-u <user agent>] [-s] [-v|-q] [-a] [-l] [-c]'
+    errorMessage += '\n-e -email            login email'
+    errorMessage += '\n-p -pass             login password'
+    errorMessage += '\n-d -directory        output directory for books and cache files'
+    errorMessage += '\n-b -books            comma separated file tipes to download (pdf,mobi,epub,code)'
+    errorMessage += '\n-i -productids       product ids to downlod, get from -list'
+    errorMessage += '\n-u -useragent        downloader HTTP user agent'
+    errorMessage += '\n-s -separate         separate each book into a deifferent directory'
+    errorMessage += '\n-v -verbose          show debug info (incompatible with -quiet)'
+    errorMessage += '\n-q -quiet            show minimal info (incompatible with -verbose)'
+    errorMessage += '\n-a -ask              ask before downloading each book'
+    errorMessage += '\n-l -list             list all books in you account'
+    errorMessage += '\n-c -cache            use cached information (if it exists) instead of requesting from the website\n'
 
     # get the command line arguments/options
     try:
         opts, args = getopt.getopt(
-            argv, 'e:p:d:b:i:u:svqalc', ['email=', 'pass=', 'directory=', 'books=', 'productids=', 'useragent=', 'separate', 'verbose', 'quiet', 'ask', 'list', 'cache'])
+            argv, 'e:p:d:b:i:u:svqalc',
+            ['email=', 'pass=', 'directory=', 'books=',
+             'productids=', 'useragent=', 'separate',
+             'verbose', 'quiet', 'ask', 'list', 'cache'])
     except getopt.GetoptError:
         print(errorMessage)
         sys.exit(2)
@@ -231,8 +246,10 @@ def main(argv):
         print("Verbose and quiet cannot be used together.")
         sys.exit(2)
 
+    tokencachefile = root_directory + "/tokencache.id"
+
     # do we have the minimum required info?
-    if not email or not password:
+    if (not email or not password) and usecache != True and not os.path.exists(tokencachefile):
         print(errorMessage)
         sys.exit(2)
 
@@ -254,7 +271,7 @@ def main(argv):
     does_dir_exist(root_directory)
 
     # create user with his properly header
-    user = User(email, password, root_directory, useragent)
+    user = User(email, password, tokencachefile, useragent)
 
     # get all your books
     if usecache:
@@ -264,7 +281,7 @@ def main(argv):
 
     if books is None:
         print("Failed to get books. Is cached authentication token expired?")
-        print("(delete mediatokencache.id to renew)")
+        print("(delete " + tokencachefile + " to renew)")
         return
 
     books_iter = books

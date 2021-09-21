@@ -51,7 +51,7 @@ After the execution, you can see the content in the `book` directory.
 
 ## Using the cache
 
-The login token is always cached in a file called `mediatokencache.id` in the current working directory. If you get an error logging in, delete this file.
+The login token is always cached in a file called `<outputfolder>/tokencache.id` in the current working directory. If you get an error logging in, delete this file.
 
 The `-c` argument activates the book list cache. It is stored in a file called `packt_cache_file.json` in the media output directory. To update the file list, just delete this file.
 
