@@ -47,7 +47,8 @@ After the execution, you can see the content in the `book` directory.
 - *pdf*: PDF format
 - *mobi*: MOBI format
 - *epub*: EPUB format
-- *code*: Accompanying source code, saved as .zip files
+- *code*: Accompanying source code, saved as a .zip file
+- *video*: For videos, this will download all videos and source saved as a .zip file
 
 ## Using the cache
 

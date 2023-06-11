@@ -151,6 +151,8 @@ def download_book(filename, url):
 def make_zip(filename):
     if filename[-4:] == 'code':
         os.replace(filename, filename[:-4] + 'zip')
+    elif filename[-5:] == 'video':
+        os.replace(filename, filename[:-5] + 'mp4.zip')
 
 
 def move_current_files(root, book):
@@ -180,7 +182,7 @@ def main(argv):
     email = None
     password = None
     root_directory =  os.path.abspath('media')
-    book_file_types = ['pdf', 'mobi', 'epub', 'code']
+    book_file_types = ['pdf', 'mobi', 'epub', 'code', 'video']
     separate = None
     verbose = None
     quiet = None

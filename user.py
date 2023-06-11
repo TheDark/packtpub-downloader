@@ -20,7 +20,7 @@ class User:
         }
     authorized = False
     tokenFilePath = None
-    
+
     def __init__(self, username, password, tokenFileDir, useragent = None):
         self.username = username
         self.password = password
@@ -31,7 +31,7 @@ class User:
     def build_auth(self):
         if self.authorized == True:
             return
-        
+
         self.header["Authorization"] = self.get_token()
         self.authorized = True
     
